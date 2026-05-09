@@ -1,0 +1,14 @@
+def countdown(start) {
+    let current = start
+    
+    while 0 < current {
+        print current
+        let current = current - 1
+    }
+    
+    print 0
+    return 1
+}
+
+let startingNumber = input
+let finished = countdown(startingNumber)

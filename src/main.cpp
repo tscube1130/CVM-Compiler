@@ -1,45 +1,65 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+
+// Include your header files
 #include "Lexer.h"
 #include "Parser.h"
 #include "Compiler.h"
 #include "VM.h"
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include <chrono> // Added for execution timing
 
 int main(int argc, char* argv[]) {
-    // 1. Check if the user provided a file name
-    if (argc != 2) {
-        std::cerr << "Usage: ./cvm <script.cvm>\n";
+    if (argc < 2) {
+        std::cerr << "Usage: ./cvm <path_to_script.cvm>\n";
         return 1;
     }
 
-    // 2. Open the file
+    // Read the source file
     std::ifstream file(argv[1]);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file '" << argv[1] << "'\n";
-        return 1;
-    }
-
-    // 3. Read the entire file into a std::string
     std::stringstream buffer;
     buffer << file.rdbuf();
-    std::string code = buffer.str();
-    
-    std::cout << "--- CVM++ Compiler Engine ---\n";
-    std::cout << "Executing: " << argv[1] << "\n\n";
+    std::string sourceCode = buffer.str();
 
-    // 4. The Standard Pipeline
-    Lexer lexer(code);
-    std::vector<Token> tokens = lexer.scanTokens();
-    
+    // PHASE 1: LEXER
+    std::cout << "\n[1/4] 🔍 LEXER: Tokenizing source code..." << std::endl;
+    Lexer lexer(sourceCode);
+    std::vector<Token> tokens = lexer.scanTokens(); // FIXED: Changed to scanTokens()
+
+    // PHASE 2: PARSER
+    std::cout << "[2/4] 🌳 PARSER: Building Abstract Syntax Tree (AST)..." << std::endl;
     Parser parser(tokens);
-    std::vector<std::unique_ptr<Stmt>> ast = parser.parse(); 
-    
+    auto ast = parser.parse();
+
+    // PHASE 3: COMPILER
+    std::cout << "[3/4] ⚙️ COMPILER: Flattening AST into 8-bit Bytecode...\n" << std::endl;
     Compiler compiler;
-    std::unordered_map<std::string, Function> compiledFunctions = compiler.compile(ast);
+    
+    // FIXED: compile() returns a dictionary of functions!
+    auto userFunctions = compiler.compile(ast);
+    
+    // Grab the main chunk and trigger YOUR built-in disassembler!
+    userFunctions["main"].chunk.disassemble();
+
+    // PHASE 4: VM
+    std::cout << "\n[4/4] 🚀 VIRTUAL MACHINE: Booting CPU and executing bytecode...\n" << std::endl;
+    std::cout << "================== OUTPUT ==================\n";
     
     VM vm;
-    vm.interpret(compiledFunctions);
-    
+    // --- START TIMING ---
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    // Execute the bytecode
+    vm.interpret(userFunctions);
+
+    // --- STOP TIMING ---
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end_time - start_time;
+
+    std::cout << "\n============================================\n";
+    std::cout << "✅VM Halted Successfully.\n";
+    // std::cout << "Execution Time: " << elapsed.count() << " ms\n";
+
     return 0;
 }
